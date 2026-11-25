@@ -15,7 +15,6 @@ struct Graph {
 };
 
 bool readGraph(const string& filename, Graph& graph) {
-
     ifstream file(filename);
 
     if (!file.is_open()) {
