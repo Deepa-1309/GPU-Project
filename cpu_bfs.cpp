@@ -13,7 +13,6 @@ struct Graph {
 };
 
 vector<int> bfsCPU(const Graph& graph, int source) {
-
     int V = graph.vertices;
 
     vector<int> distance(V, -1);
