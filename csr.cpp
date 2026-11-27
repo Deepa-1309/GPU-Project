@@ -8,77 +8,99 @@
 using namespace std;
 
 struct Graph {
-    int vertices;
-    int edges;
-    vector<int> rowPtr;
-    vector<int> colIdx;
+    int n;
+    int m;
+    vector<int> rp;
+    vector<int> ci;
 };
 
-bool readGraph(const string& filename, Graph& graph) {
-    ifstream file(filename);
+void buildCSR(int n, vector<pair<int,int>>&edges,Graph& g){
+    sort(edges.begin(),edges.end());
+    edges.erase(unique(edges.begin(),edges.end()),edges.end());
 
-    if (!file.is_open()) {
-        cout << "Cannot open graph file\n";
-        return false;
+    g.n = n;
+    g.m = 0;
+    g.rp.assign(n+1,0);
+
+    for(const auto& edge : edges){
+        int u = edge.first;
+        int v = edge.second;
+        
+        if(u==v || u<0 || v<0 || u>=n || v>=n) continue;
+
+        g.rp[u+1]++;
+        g.rp[v+1]++;
+        g.m += 2;
+
+        for (int i = 1; i <= n; i++)
+        g.rp[i] += g.rp[i - 1];
+
+    g.ci.resize(g.m);
+
+    vector<int> position = g.rp;
+
+    for (const auto& edge : edges) {
+        int u = edge.first;
+        int v = edge.second;
+
+        if (u == v || u < 0 || v < 0 || u >= n || v >= n)
+            continue;
+
+        g.ci[position[u]++] = v;
+        g.ci[position[v]++] = u;
     }
 
-    int V, E;
-    file >> V >> E;
+    for (int i = 0; i < n; i++) {
+        sort(g.ci.begin() + g.rp[i],g.ci.begin() + g.rp[i + 1]);
+    }
+}
 
-    if (!file || V <= 0 || E < 0) {
-        cout << "Invalid graph information\n";
-        return false;
+void randomConnectedGraph(int n, int edgeCount, Graph& g) {
+    if (n < 1)
+        return;
+
+    vector<pair<int, int>> edges;
+    edges.reserve(edgeCount);
+
+    mt19937 rng(12345 + n);
+
+    for (int i = 1; i < n; i++) {
+        uniform_int_distribution<int> parent(0, i - 1);
+        int p = parent(rng);
+        edges.push_back({min(i, p), max(i, p)});
     }
 
-    vector<vector<int>> adj(V);
+    long long maxEdges = (long long)n * (n - 1) / 2;
+    edgeCount = (int)min((long long)edgeCount, maxEdges);
+    edgeCount = max(edgeCount, n - 1);
 
-    for (int i = 0; i < E; i++) {
+    unordered_set<uint64_t> used;
+    used.reserve((size_t)edgeCount * 2);
 
-        int u, v;
-        file >> u >> v;
+    for (const auto& edge : edges) {
+        uint64_t key = (uint64_t)edge.first * n + edge.second;
+        used.insert(key);
+    }
 
-        if (!file || u < 0 || u >= V || v < 0 || v >= V) {
-            cout << "Invalid edge\n";
-            return false;
-        }
+    uniform_int_distribution<int> vertex(0, n - 1);
+
+    while ((int)edges.size() < edgeCount) {
+        int u = vertex(rng);
+        int v = vertex(rng);
 
         if (u == v)
             continue;
 
-        adj[u].push_back(v);
-        adj[v].push_back(u);
+        if (u > v)
+            swap(u, v);
+
+        uint64_t key = (uint64_t)u * n + v;
+
+        if (used.insert(key).second)
+            edges.push_back({u, v});
     }
 
-    graph.vertices = V;
-
-    graph.rowPtr.resize(V + 1);
-    graph.rowPtr[0] = 0;
-
-    for (int i = 0; i < V; i++) {
-
-        sort(adj[i].begin(), adj[i].end());
-
-        adj[i].erase(
-            unique(adj[i].begin(), adj[i].end()),
-            adj[i].end()
-        );
-
-        graph.rowPtr[i + 1] =
-            graph.rowPtr[i] + adj[i].size();
-    }
-
-    graph.colIdx.resize(graph.rowPtr[V]);
-
-    for (int i = 0; i < V; i++) {
-
-        int index = graph.rowPtr[i];
-
-        for (int v : adj[i]) {
-            graph.colIdx[index++] = v;
-        }
-    }
-
-    graph.edges = graph.colIdx.size() / 2;
-
-    return true;
+    buildCSR(n, edges, g);
 }
+
+
