@@ -31,8 +31,9 @@ void buildCSR(int n, vector<pair<int,int>>&edges,Graph& g){
         g.rp[u+1]++;
         g.rp[v+1]++;
         g.m += 2;
+    }
 
-        for (int i = 1; i <= n; i++)
+    for (int i = 1; i <= n; i++)
         g.rp[i] += g.rp[i - 1];
 
     g.ci.resize(g.m);
